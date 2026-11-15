@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="D-Acero Movimientos" pageWidth="842" pageHeight="595"
+              orientation="Landscape" columnWidth="802" leftMargin="20"
+              rightMargin="20" topMargin="20" bottomMargin="20">
+    <queryString language="SQL"><![CDATA[
+        SELECT fecha, tipo, sede, codigo, producto, cantidad, referencia, usuario, estado
+        FROM vw_movimientos ORDER BY fecha DESC, movimiento_id DESC
+    ]]></queryString>
+    <field name="fecha" class="java.sql.Timestamp"/>
+    <field name="tipo" class="java.lang.String"/>
+    <field name="sede" class="java.lang.String"/>
+    <field name="codigo" class="java.lang.String"/>
+    <field name="producto" class="java.lang.String"/>
+    <field name="cantidad" class="java.math.BigDecimal"/>
+    <field name="referencia" class="java.lang.String"/>
+    <field name="usuario" class="java.lang.String"/>
+    <field name="estado" class="java.lang.String"/>
+    <title><band height="48">
+        <staticText><reportElement x="0" y="4" width="802" height="28"/><textElement textAlignment="Center"><font size="18" isBold="true"/></textElement><text><![CDATA[D-ACERO | HISTORIAL DE MOVIMIENTOS]]></text></staticText>
+    </band></title>
+    <columnHeader><band height="25">
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="0" y="0" width="90" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Fecha]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="90" y="0" width="70" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Tipo]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="160" y="0" width="105" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Sede]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="265" y="0" width="80" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Código]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="345" y="0" width="170" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Producto]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="515" y="0" width="75" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Cantidad]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="590" y="0" width="90" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Referencia]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="680" y="0" width="70" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Usuario]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="750" y="0" width="52" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Estado]]></text></staticText>
+    </band></columnHeader>
+    <detail><band height="22">
+        <textField pattern="yyyy-MM-dd"><reportElement x="0" y="0" width="90" height="20"/><textFieldExpression><![CDATA[$F{fecha}]]></textFieldExpression></textField>
+        <textField><reportElement x="90" y="0" width="70" height="20"/><textFieldExpression><![CDATA[$F{tipo}]]></textFieldExpression></textField>
+        <textField><reportElement x="160" y="0" width="105" height="20"/><textFieldExpression><![CDATA[$F{sede}]]></textFieldExpression></textField>
+        <textField><reportElement x="265" y="0" width="80" height="20"/><textFieldExpression><![CDATA[$F{codigo}]]></textFieldExpression></textField>
+        <textField><reportElement x="345" y="0" width="170" height="20"/><textFieldExpression><![CDATA[$F{producto}]]></textFieldExpression></textField>
+        <textField pattern="#,##0.00"><reportElement x="515" y="0" width="75" height="20"/><textFieldExpression><![CDATA[$F{cantidad}]]></textFieldExpression></textField>
+        <textField><reportElement x="590" y="0" width="90" height="20"/><textFieldExpression><![CDATA[$F{referencia}]]></textFieldExpression></textField>
+        <textField><reportElement x="680" y="0" width="70" height="20"/><textFieldExpression><![CDATA[$F{usuario}]]></textFieldExpression></textField>
+        <textField><reportElement x="750" y="0" width="52" height="20"/><textFieldExpression><![CDATA[$F{estado}]]></textFieldExpression></textField>
+    </band></detail>
+</jasperReport>

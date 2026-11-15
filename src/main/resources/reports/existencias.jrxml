@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="D-Acero Existencias" pageWidth="842" pageHeight="595"
+              orientation="Landscape" columnWidth="802" leftMargin="20"
+              rightMargin="20" topMargin="20" bottomMargin="20">
+    <queryString language="SQL"><![CDATA[
+        SELECT sede, codigo, producto, categoria, unidad_medida, existencia, stock_minimo
+        FROM vw_existencias ORDER BY sede, producto
+    ]]></queryString>
+    <field name="sede" class="java.lang.String"/>
+    <field name="codigo" class="java.lang.String"/>
+    <field name="producto" class="java.lang.String"/>
+    <field name="categoria" class="java.lang.String"/>
+    <field name="unidad_medida" class="java.lang.String"/>
+    <field name="existencia" class="java.math.BigDecimal"/>
+    <field name="stock_minimo" class="java.math.BigDecimal"/>
+    <title><band height="48">
+        <staticText><reportElement x="0" y="4" width="802" height="28"/><textElement textAlignment="Center"><font size="18" isBold="true"/></textElement><text><![CDATA[D-ACERO | EXISTENCIAS POR SEDE]]></text></staticText>
+    </band></title>
+    <columnHeader><band height="25">
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="0" y="0" width="95" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Sede]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="95" y="0" width="90" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Código]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="185" y="0" width="190" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Producto]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="375" y="0" width="145" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Categoría]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="520" y="0" width="85" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Unidad]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="605" y="0" width="95" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Existencia]]></text></staticText>
+        <staticText><reportElement mode="Opaque" backcolor="#17304A" x="700" y="0" width="102" height="24"/><textElement forecolor="#FFFFFF"/><text><![CDATA[Stock mínimo]]></text></staticText>
+    </band></columnHeader>
+    <detail><band height="22">
+        <textField><reportElement x="0" y="0" width="95" height="20"/><textFieldExpression><![CDATA[$F{sede}]]></textFieldExpression></textField>
+        <textField><reportElement x="95" y="0" width="90" height="20"/><textFieldExpression><![CDATA[$F{codigo}]]></textFieldExpression></textField>
+        <textField><reportElement x="185" y="0" width="190" height="20"/><textFieldExpression><![CDATA[$F{producto}]]></textFieldExpression></textField>
+        <textField><reportElement x="375" y="0" width="145" height="20"/><textFieldExpression><![CDATA[$F{categoria}]]></textFieldExpression></textField>
+        <textField><reportElement x="520" y="0" width="85" height="20"/><textFieldExpression><![CDATA[$F{unidad_medida}]]></textFieldExpression></textField>
+        <textField pattern="#,##0.00"><reportElement x="605" y="0" width="95" height="20"/><textFieldExpression><![CDATA[$F{existencia}]]></textFieldExpression></textField>
+        <textField pattern="#,##0.00"><reportElement x="700" y="0" width="102" height="20"/><textFieldExpression><![CDATA[$F{stock_minimo}]]></textFieldExpression></textField>
+    </band></detail>
+</jasperReport>

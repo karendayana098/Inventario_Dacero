@@ -1,0 +1,9 @@
+target/
+**/target/
+*.class
+*.log
+.env
+.env.*
+application-local.properties
+nbproject/private/
+D-Acero-NetBeans/
