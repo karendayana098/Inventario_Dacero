@@ -16,22 +16,9 @@ Aplicación de escritorio para gestionar productos, existencias y movimientos de
 
 ## Configurar la conexión
 
-La aplicación lee la conexión desde estas variables de entorno:
+La app lee `db.local.properties` desde la carpeta del proyecto. Copia `db.local.properties.example` con ese nombre y configura los valores locales. Ese archivo está excluido de Git para que la contraseña de MySQL no se publique. Las variables de entorno `DACERO_DB_URL`, `DACERO_DB_USER` y `DACERO_DB_PASSWORD`, cuando están definidas, tienen prioridad sobre el archivo.
 
-| Variable | Valor predeterminado |
-| --- | --- |
-| `DACERO_DB_URL` | `jdbc:mysql://localhost:3306/dacero?useSSL=false&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true` |
-| `DACERO_DB_USER` | `root` |
-| `DACERO_DB_PASSWORD` | Vacío |
-
-Configura `DACERO_DB_PASSWORD` con la contraseña de tu instalación de MySQL. No guardes contraseñas en el código ni en el repositorio. NetBeans debe iniciarse después de configurar las variables para que las herede.
-
-En PowerShell puedes definirlas para la sesión actual antes de iniciar NetBeans:
-
-```powershell
-$env:DACERO_DB_USER = "root"
-$env:DACERO_DB_PASSWORD = "tu contraseña de MySQL"
-```
+No guardes contraseñas en `Db.java` ni subas `db.local.properties` al repositorio.
 
 ## Iniciar
 
