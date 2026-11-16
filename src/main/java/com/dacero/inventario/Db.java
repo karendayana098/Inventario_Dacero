@@ -1,12 +1,13 @@
 package com.dacero.inventario;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Properties;
 
 public final class Db {
@@ -28,8 +29,8 @@ public final class Db {
         Path file = Path.of("db.local.properties");
         if (!Files.isRegularFile(file)) return settings;
 
-        try (InputStream input = Files.newInputStream(file)) {
-            settings.load(input);
+        try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            settings.load(reader);
             return settings;
         } catch (IOException ex) {
             throw new SQLException("No se pudo leer db.local.properties.", ex);
