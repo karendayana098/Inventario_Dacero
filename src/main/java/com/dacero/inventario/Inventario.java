@@ -89,6 +89,57 @@ public final class Inventario {
         return options("SELECT categoria_id, nombre FROM categoria ORDER BY nombre");
     }
 
+    public static List<Object[]> siteRows() throws SQLException {
+        return rows("SELECT sede_id, nombre, municipio, direccion, activa "
+                + "FROM sede ORDER BY nombre");
+    }
+
+    public static List<Object[]> categoryRows() throws SQLException {
+        return rows("SELECT categoria_id, nombre, descripcion FROM categoria ORDER BY nombre");
+    }
+
+    public static void saveSite(Long id, String name, String municipality,
+            String address, boolean active) throws SQLException {
+        requireText(name, "El nombre de la sede es obligatorio.");
+        requireText(municipality, "El municipio es obligatorio.");
+        try (Connection cn = Db.connect()) {
+            ensureUnique(cn, "sede", "sede_id", id, "nombre", name.trim(),
+                    "Ya existe una sede con ese nombre.");
+            String sql = id == null
+                    ? "INSERT INTO sede (nombre, municipio, direccion, activa) VALUES (?,?,?,?)"
+                    : "UPDATE sede SET nombre=?, municipio=?, direccion=?, activa=? WHERE sede_id=?";
+            try (PreparedStatement ps = cn.prepareStatement(sql)) {
+                ps.setString(1, name.trim());
+                ps.setString(2, municipality.trim());
+                ps.setString(3, blankToNull(address));
+                ps.setBoolean(4, active);
+                if (id != null) ps.setLong(5, id);
+                ps.executeUpdate();
+            } catch (SQLException ex) {
+                throw duplicateMessage(ex, "Ya existe una sede con ese nombre.");
+            }
+        }
+    }
+
+    public static void saveCategory(Long id, String name, String description) throws SQLException {
+        requireText(name, "El nombre de la categoría es obligatorio.");
+        try (Connection cn = Db.connect()) {
+            ensureUnique(cn, "categoria", "categoria_id", id, "nombre", name.trim(),
+                    "Ya existe una categoría con ese nombre.");
+            String sql = id == null
+                    ? "INSERT INTO categoria (nombre, descripcion) VALUES (?,?)"
+                    : "UPDATE categoria SET nombre=?, descripcion=? WHERE categoria_id=?";
+            try (PreparedStatement ps = cn.prepareStatement(sql)) {
+                ps.setString(1, name.trim());
+                ps.setString(2, blankToNull(description));
+                if (id != null) ps.setLong(3, id);
+                ps.executeUpdate();
+            } catch (SQLException ex) {
+                throw duplicateMessage(ex, "Ya existe una categoría con ese nombre.");
+            }
+        }
+    }
+
     public static List<Option> sites() throws SQLException {
         return options("SELECT sede_id, nombre FROM sede WHERE activa=TRUE ORDER BY nombre");
     }
@@ -116,6 +167,8 @@ public final class Inventario {
         try (Connection cn = Db.connect()) {
             cn.setAutoCommit(false);
             try {
+                ensureUnique(cn, "producto", "producto_id", productId, "codigo", code.trim(),
+                        "Ya existe un producto con ese código.");
                 Long categoryId = getOrCreateCategory(cn, categoryName);
                 if (productId == null) {
                     String sql = "INSERT INTO producto "
@@ -139,6 +192,9 @@ public final class Inventario {
                 cn.commit();
             } catch (SQLException | RuntimeException ex) {
                 cn.rollback();
+                if (ex instanceof SQLException sqlEx) {
+                    throw duplicateMessage(sqlEx, "Ya existe un registro con esos datos.");
+                }
                 throw ex;
             } finally {
                 cn.setAutoCommit(true);
@@ -204,5 +260,29 @@ public final class Inventario {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static void requireText(String value, String message) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(message);
+    }
+
+    private static void ensureUnique(Connection cn, String table, String idColumn, Long id,
+            String valueColumn, String value, String message) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM " + table + " WHERE " + valueColumn + "=?"
+                + (id == null ? "" : " AND " + idColumn + "<>?");
+        try (PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setString(1, value);
+            if (id != null) ps.setLong(2, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getLong(1) > 0) throw new IllegalArgumentException(message);
+            }
+        }
+    }
+
+    private static SQLException duplicateMessage(SQLException ex, String message) {
+        if (ex.getErrorCode() == 1062 || "23000".equals(ex.getSQLState())) {
+            return new SQLException(message, ex.getSQLState(), ex.getErrorCode(), ex);
+        }
+        return ex;
     }
 }

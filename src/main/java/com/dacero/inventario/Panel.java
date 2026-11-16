@@ -1,22 +1,33 @@
 package com.dacero.inventario;
 
 import java.awt.Color;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridLayout;
 import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 
 /** JFrame Form: abrir Panel.java y elegir Design para editar la interfaz. */
 public class Panel extends JFrame {
     private final Color navy = new Color(23, 48, 74);
     private final Color teal = new Color(0, 139, 139);
     private final App user;
-    private final JComboBox<String> reportSelector = new JComboBox<>(new String[]{
-        "Existencias por sede", "Productos con stock bajo", "Historial de movimientos"
-    });
+    private final JButton btnSedes = new JButton("Sedes");
+    private final JButton btnCategorias = new JButton("Categorías");
+    private final JButton btnUsuarios = new JButton("Usuarios");
+    private final JButton btnSalir = new JButton("Salir");
+    private JPanel statsCards;
     private String seccionActual = "Inicio";
 
     public Panel() {
@@ -27,20 +38,27 @@ public class Panel extends JFrame {
         this.user = user;
         initComponents();
         configurarEstilo();
-        reportSelector.setVisible(false);
-        reportSelector.addActionListener(e -> cargarReporteSeleccionado());
-        mainPanel.add(reportSelector, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 105, 300, 30));
+        construirInterfaz();
         btnInicio.addActionListener(e -> mostrarSeccion("Inicio"));
         btnProductos.addActionListener(e -> mostrarSeccion("Productos"));
         btnMovimientos.addActionListener(e -> mostrarSeccion("Movimientos"));
-        btnReportes.addActionListener(e -> mostrarSeccion("Consultas y reportes"));
+        btnSedes.addActionListener(e -> mostrarSeccion("Sedes"));
+        btnCategorias.addActionListener(e -> mostrarSeccion("Categorías"));
+        btnUsuarios.addActionListener(e -> new UserManagementDialog(this).setVisible(true));
+        btnSalir.addActionListener(e -> salir());
         btnNuevo.addActionListener(e -> {
             if ("Productos".equals(seccionActual)) nuevoProducto();
             else if ("Movimientos".equals(seccionActual)) registrarMovimiento();
+            else if ("Sedes".equals(seccionActual)) editarSede(null, "", "", "", true);
+            else if ("Categorías".equals(seccionActual)) editarCategoria(null, "", "");
         });
-        btnEditar.addActionListener(e -> editarProducto());
+        btnEditar.addActionListener(e -> {
+            if ("Productos".equals(seccionActual)) editarProducto();
+            else if ("Sedes".equals(seccionActual)) editarSedeSeleccionada();
+            else if ("Categorías".equals(seccionActual)) editarCategoriaSeleccionada();
+        });
         btnActualizar.addActionListener(e -> refrescarSeccion());
-        btnExportar.addActionListener(e -> exportarReporte());
+        btnExportar.addActionListener(e -> exportarTablaCsv());
         mostrarSeccion("Inicio");
     }
 
@@ -49,10 +67,8 @@ public class Panel extends JFrame {
         sidebarPanel.setBackground(navy);
         brandLabel.setForeground(Color.WHITE);
         brandLabel.setFont(new Font("Segoe UI", Font.BOLD, 23));
-        for (JButton b : new JButton[]{btnInicio, btnProductos, btnMovimientos, btnReportes}) {
-            b.setForeground(Color.WHITE); b.setBackground(navy); b.setBorderPainted(false);
-            b.setFocusPainted(false); b.setHorizontalAlignment(SwingConstants.LEFT);
-        }
+        for (JButton b : new JButton[]{btnInicio, btnProductos, btnMovimientos, btnReportes,
+                btnSedes, btnCategorias, btnUsuarios, btnSalir}) estiloBotonLateral(b);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(navy);
         for (JPanel card : new JPanel[]{cardProductos, cardReposicion, cardMovimientos}) card.setBackground(new Color(244,248,251));
@@ -66,7 +82,84 @@ public class Panel extends JFrame {
         for (JButton b : new JButton[]{btnNuevo, btnEditar, btnActualizar, btnExportar}) {
             b.setBackground(teal); b.setForeground(Color.WHITE); b.setFocusPainted(false);
         }
-        setSize(1180, 740); setMinimumSize(new java.awt.Dimension(1000, 650)); setLocationRelativeTo(null);
+        setTitle("D-ACERO | Gestión de inventario");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setMinimumSize(new Dimension(1050, 680));
+        setSize(1280, 800);
+        setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+    }
+
+    private void estiloBotonLateral(JButton button) {
+        button.setForeground(Color.WHITE);
+        button.setBackground(navy);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        button.setPreferredSize(new Dimension(200, 44));
+    }
+
+    private void construirInterfaz() {
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(Color.WHITE);
+
+        sidebarPanel.removeAll();
+        sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
+        sidebarPanel.setBorder(BorderFactory.createEmptyBorder(22, 16, 18, 16));
+        sidebarPanel.setPreferredSize(new Dimension(230, 0));
+        brandLabel.setAlignmentX(LEFT_ALIGNMENT);
+        sidebarPanel.add(brandLabel);
+        sidebarPanel.add(Box.createVerticalStrut(28));
+        for (JButton button : new JButton[]{btnInicio, btnProductos, btnSedes,
+                btnCategorias, btnMovimientos}) {
+            button.setAlignmentX(LEFT_ALIGNMENT);
+            sidebarPanel.add(button);
+            sidebarPanel.add(Box.createVerticalStrut(7));
+        }
+        if (user != null && user.isAdmin()) {
+            btnUsuarios.setAlignmentX(LEFT_ALIGNMENT);
+            sidebarPanel.add(btnUsuarios);
+            sidebarPanel.add(Box.createVerticalStrut(7));
+        }
+        sidebarPanel.add(Box.createVerticalGlue());
+        btnSalir.setAlignmentX(LEFT_ALIGNMENT);
+        sidebarPanel.add(btnSalir);
+
+        JPanel heading = new JPanel(new GridLayout(2, 1, 0, 4));
+        heading.setOpaque(false);
+        heading.add(titleLabel);
+        heading.add(infoLabel);
+        statsCards = new JPanel(new GridLayout(1, 3, 14, 0));
+        statsCards.setOpaque(false);
+        for (JPanel card : new JPanel[]{cardProductos, cardReposicion, cardMovimientos}) {
+            card.setPreferredSize(new Dimension(260, 94));
+            statsCards.add(card);
+        }
+        JPanel header = new JPanel(new BorderLayout(0, 16));
+        header.setOpaque(false);
+        header.add(heading, BorderLayout.NORTH);
+        header.add(statsCards, BorderLayout.CENTER);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        actions.setOpaque(false);
+        actions.add(btnNuevo);
+        actions.add(btnEditar);
+        actions.add(btnActualizar);
+        actions.add(btnExportar);
+
+        mainPanel.removeAll();
+        mainPanel.setLayout(new BorderLayout(12, 16));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(24, 26, 18, 26));
+        mainPanel.setBackground(Color.WHITE);
+        mainPanel.add(header, BorderLayout.NORTH);
+        mainPanel.add(dataScroll, BorderLayout.CENTER);
+        mainPanel.add(actions, BorderLayout.SOUTH);
+
+        root.add(sidebarPanel, BorderLayout.WEST);
+        root.add(mainPanel, BorderLayout.CENTER);
+        setContentPane(root);
+        revalidate();
     }
 
     private void mostrarSeccion(String seccion) {
@@ -74,34 +167,42 @@ public class Panel extends JFrame {
         titleLabel.setText(seccion.equals("Inicio") ? "Panel principal" : seccion);
         boolean inicio = seccion.equals("Inicio");
         cardProductos.setVisible(inicio); cardReposicion.setVisible(inicio); cardMovimientos.setVisible(inicio);
+        statsCards.setVisible(inicio);
         if (inicio) {
             infoLabel.setText("Inventario por sede · " + (user == null ? "D-ACERO" : "Sesión: " + user.name()));
             actualizarMetricas();
             cargarTabla(new String[]{"Módulo", "Descripción", "Estado"}, new Object[][]{
-                {"Productos", "Catálogo y existencias por sede", "Disponible"},
-                {"Movimientos", "Entradas, salidas y ajustes", "Disponible"},
-                {"Reportes", "Existencias, bajo mínimo y movimientos", "JasperReports"}});
+                {"Productos", "Catálogo e inventario por sede", "Disponible"},
+                {"Sedes", "Administración de sedes", "Disponible"},
+                {"Categorías", "Clasificación de productos", "Disponible"},
+                {"Movimientos", "Entradas, salidas y ajustes", "Disponible"}});
         } else if (seccion.equals("Productos")) {
             infoLabel.setText("Catálogo, categoría, stock mínimo y saldo por sede");
             cargarProductos();
         } else if (seccion.equals("Movimientos")) {
             infoLabel.setText("Historial de entradas y salidas registrado en MySQL");
             cargarMovimientos();
+        } else if (seccion.equals("Sedes")) {
+            infoLabel.setText("Administra las sedes y sus ubicaciones");
+            cargarSedes();
+        } else if (seccion.equals("Categorías")) {
+            infoLabel.setText("Administra las categorías del catálogo");
+            cargarCategorias();
         } else {
-            infoLabel.setText("Consulta los datos y exporta un reporte PDF con JasperReports");
-            reportSelector.setVisible(true);
-            cargarReporteSeleccionado();
+            mostrarSeccion("Inicio");
+            return;
         }
-        if (!seccion.equals("Consultas y reportes")) reportSelector.setVisible(false);
         boolean listado = !inicio;
         dataScroll.setVisible(true);
-        btnNuevo.setText(seccion.equals("Movimientos") ? "Registrar mov." : "Nuevo producto");
-        btnNuevo.setVisible(user == null || user.canWrite()
-                ? seccion.equals("Productos") || seccion.equals("Movimientos")
-                : false);
-        btnEditar.setVisible(seccion.equals("Productos") && (user == null || user.canWrite()));
+        btnNuevo.setText(seccion.equals("Movimientos") ? "Registrar mov."
+                : seccion.equals("Sedes") ? "Nueva sede"
+                : seccion.equals("Categorías") ? "Nueva categoría" : "Nuevo producto");
+        boolean canWrite = user == null || user.canWrite();
+        btnNuevo.setVisible(canWrite && List.of("Productos", "Movimientos", "Sedes", "Categorías").contains(seccion));
+        btnEditar.setVisible(canWrite && List.of("Productos", "Sedes", "Categorías").contains(seccion));
         btnActualizar.setVisible(listado);
-        btnExportar.setVisible(seccion.equals("Consultas y reportes"));
+        btnExportar.setText("Exportar CSV");
+        btnExportar.setVisible(listado);
         mainPanel.revalidate(); mainPanel.repaint();
     }
 
@@ -121,6 +222,7 @@ public class Panel extends JFrame {
             cargarTabla(new String[]{"ID", "Código", "Producto", "Categoría", "Unidad",
                 "Stock mínimo", "Activo", "Sede", "Existencia"},
                 Inventario.products().toArray(Object[][]::new));
+            ocultarId();
         } catch (SQLException ex) { mostrarError(ex); }
     }
 
@@ -132,36 +234,26 @@ public class Panel extends JFrame {
         } catch (SQLException ex) { mostrarError(ex); }
     }
 
-    private void cargarReporteExistencias() {
-        try {
-            cargarTabla(new String[]{"Sede", "Código", "Producto", "Categoría", "Unidad",
-                "Existencia", "Mínimo", "Reponer"},
-                Inventario.inventory().toArray(Object[][]::new));
-        } catch (SQLException ex) { mostrarError(ex); }
+    private void cargarSedes() {
+        try { cargarTabla(new String[]{"ID", "Nombre", "Municipio", "Dirección", "Activa"}, Inventario.siteRows().toArray(Object[][]::new)); ocultarId(); }
+        catch (SQLException ex) { mostrarError(ex); }
     }
 
-    private void cargarReporteSeleccionado() {
-        if (!"Consultas y reportes".equals(seccionActual)) return;
-        int selected = reportSelector.getSelectedIndex();
-        try {
-            if (selected == 1) {
-                cargarTabla(new String[]{"Sede", "Código", "Producto", "Existencia", "Stock mínimo"},
-                        Inventario.lowStock().toArray(Object[][]::new));
-            } else if (selected == 2) {
-                cargarMovimientos();
-            } else {
-                cargarReporteExistencias();
-            }
-        } catch (SQLException | RuntimeException ex) {
-            mostrarError(ex);
-        }
+    private void cargarCategorias() {
+        try { cargarTabla(new String[]{"ID", "Nombre", "Descripción"}, Inventario.categoryRows().toArray(Object[][]::new)); ocultarId(); }
+        catch (SQLException ex) { mostrarError(ex); }
+    }
+
+    private void ocultarId() {
+        if (dataTable.getColumnCount() > 0) dataTable.removeColumn(dataTable.getColumnModel().getColumn(0));
     }
 
     private void refrescarSeccion() {
         if ("Inicio".equals(seccionActual)) mostrarSeccion("Inicio");
         else if ("Productos".equals(seccionActual)) cargarProductos();
         else if ("Movimientos".equals(seccionActual)) cargarMovimientos();
-        else cargarReporteSeleccionado();
+        else if ("Sedes".equals(seccionActual)) cargarSedes();
+        else if ("Categorías".equals(seccionActual)) cargarCategorias();
     }
 
     private void nuevoProducto() {
@@ -175,8 +267,10 @@ public class Panel extends JFrame {
                     "Editar producto", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        Object[] values = new Object[ dataTable.getColumnCount() ];
-        for (int i = 0; i < values.length; i++) values[i] = dataTable.getValueAt(row, i);
+        int modelRow = dataTable.convertRowIndexToModel(row);
+        TableModel model = dataTable.getModel();
+        Object[] values = new Object[model.getColumnCount()];
+        for (int i = 0; i < values.length; i++) values[i] = model.getValueAt(modelRow, i);
         try {
             editarProducto(((Number) values[0]).longValue(), String.valueOf(values[1]),
                     String.valueOf(values[2]), String.valueOf(values[3]),
@@ -220,6 +314,56 @@ public class Panel extends JFrame {
         } catch (SQLException | IllegalArgumentException ex) {
             mostrarError(ex);
         }
+    }
+
+    private void editarSedeSeleccionada() {
+        int row = dataTable.getSelectedRow();
+        if (row < 0) { sinSeleccion("sede"); return; }
+        Object[] v = filaModelo(row);
+        editarSede(((Number)v[0]).longValue(), String.valueOf(v[1]), String.valueOf(v[2]),
+                v[3] == null ? "" : String.valueOf(v[3]), Boolean.parseBoolean(String.valueOf(v[4])));
+    }
+
+    private void editarSede(Long id, String name, String municipality, String address, boolean active) {
+        JTextField nombre = new JTextField(name, 22), municipio = new JTextField(municipality, 22), direccion = new JTextField(address, 22);
+        JCheckBox activa = new JCheckBox("Sede activa", active);
+        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
+        form.add(new JLabel("Nombre:")); form.add(nombre); form.add(new JLabel("Municipio:")); form.add(municipio);
+        form.add(new JLabel("Dirección:")); form.add(direccion); form.add(new JLabel("Estado:")); form.add(activa);
+        if (JOptionPane.showConfirmDialog(this, form, id == null ? "Nueva sede" : "Editar sede",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try { Inventario.saveSite(id, nombre.getText(), municipio.getText(), direccion.getText(), activa.isSelected()); cargarSedes(); }
+        catch (SQLException | IllegalArgumentException ex) { mostrarError(ex); }
+    }
+
+    private void editarCategoriaSeleccionada() {
+        int row = dataTable.getSelectedRow();
+        if (row < 0) { sinSeleccion("categoría"); return; }
+        Object[] v = filaModelo(row);
+        editarCategoria(((Number)v[0]).longValue(), String.valueOf(v[1]), v[2] == null ? "" : String.valueOf(v[2]));
+    }
+
+    private void editarCategoria(Long id, String name, String description) {
+        JTextField nombre = new JTextField(name, 22), descripcion = new JTextField(description, 22);
+        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
+        form.add(new JLabel("Nombre:")); form.add(nombre); form.add(new JLabel("Descripción:")); form.add(descripcion);
+        if (JOptionPane.showConfirmDialog(this, form, id == null ? "Nueva categoría" : "Editar categoría",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+        try { Inventario.saveCategory(id, nombre.getText(), descripcion.getText()); cargarCategorias(); }
+        catch (SQLException | IllegalArgumentException ex) { mostrarError(ex); }
+    }
+
+    private Object[] filaModelo(int viewRow) {
+        int row = dataTable.convertRowIndexToModel(viewRow);
+        TableModel model = dataTable.getModel();
+        Object[] values = new Object[model.getColumnCount()];
+        for (int i = 0; i < values.length; i++) values[i] = model.getValueAt(row, i);
+        return values;
+    }
+
+    private void sinSeleccion(String entity) {
+        JOptionPane.showMessageDialog(this, "Selecciona una " + entity + " de la tabla.",
+                "Editar", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void registrarMovimiento() {
@@ -275,29 +419,53 @@ public class Panel extends JFrame {
         }
     }
 
-    private void exportarReporte() {
-        Reportes.Report report = switch (reportSelector.getSelectedIndex()) {
-            case 1 -> Reportes.Report.STOCK_BAJO;
-            case 2 -> Reportes.Report.MOVIMIENTOS;
-            default -> Reportes.Report.EXISTENCIAS;
-        };
+    private void exportarTablaCsv() {
+        TableModel model = dataTable.getModel();
+        if (model.getColumnCount() == 0) return;
         JFileChooser chooser = new JFileChooser();
-        chooser.setSelectedFile(new File(report.fileName()));
+        chooser.setSelectedFile(new File(seccionActual.toLowerCase().replace(' ', '_') + ".csv"));
         if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
         File destination = chooser.getSelectedFile();
-        if (!destination.getName().toLowerCase().endsWith(".pdf"))
-            destination = new File(destination.getParentFile(), destination.getName() + ".pdf");
         try {
-            Reportes.exportPdf(report, destination);
-            JOptionPane.showMessageDialog(this, "Reporte guardado en:\n" + destination.getAbsolutePath(),
-                    "Reporte generado", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception ex) {
-            mostrarError(ex);
-        }
+            if (!destination.getName().toLowerCase().endsWith(".csv")) destination = new File(destination.getParentFile(), destination.getName() + ".csv");
+            StringBuilder csv = new StringBuilder("\uFEFF");
+            for (int c = 0; c < dataTable.getColumnCount(); c++) {
+                if (c > 0) csv.append(',');
+                csv.append(csvValue(dataTable.getColumnName(c)));
+            }
+            csv.append("\r\n");
+            for (int r = 0; r < dataTable.getRowCount(); r++) {
+                for (int c = 0; c < dataTable.getColumnCount(); c++) {
+                    if (c > 0) csv.append(',');
+                    csv.append(csvValue(dataTable.getValueAt(r, c)));
+                }
+                csv.append("\r\n");
+            }
+            Files.writeString(destination.toPath(), csv.toString(), StandardCharsets.UTF_8);
+            JOptionPane.showMessageDialog(this, "Tabla exportada en:\n" + destination.getAbsolutePath(), "Exportación", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException ex) { mostrarError(ex); }
+    }
+
+    private String csvValue(Object value) {
+        String text = value == null ? "" : value.toString();
+        return "\"" + text.replace("\"", "\"\"") + "\"";
+    }
+
+    private void salir() {
+        dispose();
+        Login login = new Login();
+        login.setVisible(true);
     }
 
     private void mostrarError(Exception ex) {
-        JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        String message = ex.getMessage() == null ? "Ocurrió un error al guardar." : ex.getMessage();
+        if (ex instanceof SQLException sql && (sql.getErrorCode() == 1062 || "23000".equals(sql.getSQLState()))) {
+            if (message.toLowerCase().contains("duplicate") || sql.getErrorCode() == 1062)
+                message = "Ya existe un registro con esos datos. Verifica el código o nombre e inténtalo de nuevo.";
+            else if (message.toLowerCase().contains("foreign key") || message.toLowerCase().contains("constraint"))
+                message = "No se puede guardar: el registro está relacionado con otros datos o falta una selección válida.";
+        }
+        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     private void cargarTabla(String[] columnas, Object[][] filas) {

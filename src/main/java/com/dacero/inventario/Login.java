@@ -17,8 +17,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 public final class Login extends JFrame {
-    private final JTextField userField = new JTextField(20);
-    private final JPasswordField passwordField = new JPasswordField(20);
+    private final JTextField userField = new JTextField(24);
+    private final JPasswordField passwordField = new JPasswordField(24);
     private final Color navy = new Color(23, 48, 74);
     private final Color teal = new Color(0, 139, 139);
     private boolean ready = true;
@@ -40,7 +40,7 @@ public final class Login extends JFrame {
             ready = false;
             JOptionPane.showMessageDialog(this,
                     "No se pudo conectar con MySQL.\n" + ex.getMessage()
-                    + "\n\nVerifica que MySQL esté iniciado y que Db.java tenga el usuario y contraseña correctos.",
+                    + "\n\nVerifica que MySQL esté iniciado y que db.local.properties tenga el usuario y contraseña correctos.",
                     "Error de conexión", JOptionPane.ERROR_MESSAGE);
             dispose();
         }
@@ -84,7 +84,12 @@ public final class Login extends JFrame {
         root.add(fields, BorderLayout.CENTER);
         root.add(loginButton, BorderLayout.SOUTH);
         setContentPane(root);
-        setSize(new Dimension(390, 300));
+        Font inputFont = new Font("Segoe UI", Font.PLAIN, 17);
+        userField.setFont(inputFont);
+        passwordField.setFont(inputFont);
+        userField.setPreferredSize(new Dimension(300, 42));
+        passwordField.setPreferredSize(new Dimension(300, 42));
+        setSize(new Dimension(460, 340));
     }
 
     private boolean createFirstAdmin() {
