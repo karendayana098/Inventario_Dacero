@@ -53,7 +53,7 @@ public final class InventoryRepository {
 
     public static List<Object[]> movements() throws SQLException {
         return rows("SELECT movimiento_id, fecha, tipo, sede, codigo, producto, "
-                + "cantidad, usuario, referencia, estado FROM vw_movimientos "
+                + "cantidad, usuario, referencia FROM vw_movimientos "
                 + "ORDER BY fecha DESC, movimiento_id DESC");
     }
 

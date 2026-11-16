@@ -229,7 +229,7 @@ public class Panel extends JFrame {
     private void cargarMovimientos() {
         try {
             cargarTabla(new String[]{"ID", "Fecha", "Tipo", "Sede", "Código", "Producto",
-                "Cantidad", "Usuario", "Referencia", "Estado"},
+                "Cantidad", "Usuario", "Referencia"},
                 Inventario.movements().toArray(Object[][]::new));
         } catch (SQLException ex) { mostrarError(ex); }
     }
