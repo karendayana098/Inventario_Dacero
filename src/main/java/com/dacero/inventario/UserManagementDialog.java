@@ -28,6 +28,10 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 final class UserManagementDialog extends JDialog {
+    private record RoleChoice(String code, String label) {
+        @Override public String toString() { return label; }
+    }
+
     private final Color navy = new Color(23, 48, 74);
     private final Color teal = new Color(0, 139, 139);
     private final JTable table = new JTable();
@@ -93,7 +97,7 @@ final class UserManagementDialog extends JDialog {
         try {
             users = Autenticacion.users();
             Object[][] rows = users.stream().map(u -> new Object[]{u.id(), u.name(),
-                u.username(), u.role(), u.active() ? "Activo" : "Inactivo"}).toArray(Object[][]::new);
+                u.username(), roleLabel(u.role()), u.active() ? "Activo" : "Inactivo"}).toArray(Object[][]::new);
             table.setModel(new DefaultTableModel(rows,
                     new String[]{"ID", "Nombre", "Usuario", "Rol", "Estado"}) {
                 @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -118,8 +122,13 @@ final class UserManagementDialog extends JDialog {
     private void editUser(Autenticacion.UserEntry current) {
         JTextField name = new JTextField(current == null ? "" : current.name(), 24);
         JTextField username = new JTextField(current == null ? "" : current.username(), 24);
-        JComboBox<String> role = new JComboBox<>(new String[]{"ADMIN", "OPERADOR", "CONSULTA"});
-        if (current != null) role.setSelectedItem(current.role());
+        JComboBox<RoleChoice> role = new JComboBox<>(new RoleChoice[]{
+            new RoleChoice("ADMINISTRADOR", "Administrador"),
+            new RoleChoice("VENDEDOR", "Vendedor"),
+            new RoleChoice("BODEGUERO", "Bodeguero")
+        });
+        role.setToolTipText("Administrador: acceso total. Vendedor: registra salidas. Bodeguero: administra productos y movimientos de stock.");
+        if (current != null) role.setSelectedItem(roleChoice(current.role()));
         JCheckBox active = new JCheckBox("Cuenta activa", current == null || current.active());
         JPasswordField password = new JPasswordField(24);
         JPasswordField confirmation = new JPasswordField(24);
@@ -127,11 +136,13 @@ final class UserManagementDialog extends JDialog {
         form.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         form.add(new JLabel("Nombre completo:")); form.add(name);
         form.add(new JLabel("Usuario:")); form.add(username);
-        form.add(new JLabel("Rol:")); form.add(role);
+        form.add(new JLabel("Tipo de usuario:")); form.add(role);
         form.add(new JLabel("Estado:")); form.add(active);
         form.add(new JLabel(current == null ? "Contraseña (8+):" : "Nueva contraseña (opcional):"));
         form.add(password);
         form.add(new JLabel("Confirmar contraseña:")); form.add(confirmation);
+        form.add(new JLabel("Permisos del tipo:"));
+        form.add(new JLabel("Admin: todo · Vendedor: salidas · Bodeguero: productos y stock"));
 
         int result = JOptionPane.showConfirmDialog(this, form,
                 current == null ? "Crear usuario" : "Editar usuario",
@@ -146,10 +157,10 @@ final class UserManagementDialog extends JDialog {
             }
             if (current == null) {
                 Autenticacion.createUser(name.getText(), username.getText(),
-                        (String) role.getSelectedItem(), secret);
+                        ((RoleChoice) role.getSelectedItem()).code(), secret);
             } else {
                 Autenticacion.updateUser(current.id(), name.getText(), username.getText(),
-                        (String) role.getSelectedItem(), active.isSelected(), secret);
+                        ((RoleChoice) role.getSelectedItem()).code(), active.isSelected(), secret);
             }
             loadUsers();
         } catch (SQLException | IllegalArgumentException ex) {
@@ -182,5 +193,18 @@ final class UserManagementDialog extends JDialog {
 
     private String csv(String value) {
         return "\"" + (value == null ? "" : value.replace("\"", "\"\"")) + "\"";
+    }
+
+    private RoleChoice roleChoice(String role) {
+        return switch (role == null ? "" : role.toUpperCase()) {
+            case "ADMIN", "ADMINISTRADOR" -> new RoleChoice("ADMINISTRADOR", "Administrador");
+            case "CONSULTA", "VENDEDOR" -> new RoleChoice("VENDEDOR", "Vendedor");
+            case "OPERADOR", "BODEGUERO" -> new RoleChoice("BODEGUERO", "Bodeguero");
+            default -> new RoleChoice("BODEGUERO", "Bodeguero");
+        };
+    }
+
+    private String roleLabel(String role) {
+        return roleChoice(role).label();
     }
 }

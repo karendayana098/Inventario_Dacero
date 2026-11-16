@@ -63,10 +63,10 @@ public final class Autenticacion {
         try (Connection cn = Db.connect()) {
             cn.setAutoCommit(false);
             try {
-                if (!"ADMIN".equals(role) || !active) {
+                if (!("ADMINISTRADOR".equals(role) || "ADMIN".equals(role)) || !active) {
                     try (PreparedStatement count = cn.prepareStatement(
                             "SELECT COUNT(*) FROM usuario_app "
-                                    + "WHERE rol='ADMIN' AND activo=TRUE AND usuario_id<>?")) {
+                                    + "WHERE rol IN ('ADMINISTRADOR','ADMIN') AND activo=TRUE AND usuario_id<>?")) {
                         count.setLong(1, id);
                         try (ResultSet rs = count.executeQuery()) {
                             if (rs.next() && rs.getLong(1) == 0) {
@@ -110,7 +110,7 @@ public final class Autenticacion {
         if (name == null || name.isBlank() || username == null || username.isBlank()) {
             throw new IllegalArgumentException("Nombre y usuario son obligatorios.");
         }
-        if (!List.of("ADMIN", "OPERADOR", "CONSULTA").contains(role)) {
+        if (!List.of("ADMINISTRADOR", "VENDEDOR", "BODEGUERO").contains(role)) {
             throw new IllegalArgumentException("Selecciona un rol válido.");
         }
     }
@@ -150,7 +150,7 @@ public final class Autenticacion {
                     }
                 }
                 String sql = "INSERT INTO usuario_app (nombre, usuario, clave_hash, rol, activo) "
-                        + "VALUES (?, ?, ?, 'ADMIN', TRUE)";
+                        + "VALUES (?, ?, ?, 'ADMINISTRADOR', TRUE)";
                 try (PreparedStatement ps = cn.prepareStatement(sql)) {
                     ps.setString(1, name.trim());
                     ps.setString(2, username.trim());

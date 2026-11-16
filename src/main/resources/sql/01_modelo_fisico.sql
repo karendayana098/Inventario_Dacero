@@ -35,12 +35,12 @@ CREATE TABLE IF NOT EXISTS usuario_app (
     nombre VARCHAR(100) NOT NULL,
     usuario VARCHAR(50) NOT NULL,
     clave_hash VARCHAR(255) NOT NULL,
-    rol VARCHAR(20) NOT NULL DEFAULT 'OPERADOR',
+    rol VARCHAR(20) NOT NULL DEFAULT 'BODEGUERO',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     PRIMARY KEY (usuario_id),
     UNIQUE KEY uq_usuario_app_usuario (usuario),
     CONSTRAINT chk_usuario_app_rol
-        CHECK (rol IN ('ADMIN', 'OPERADOR', 'CONSULTA'))
+        CHECK (rol IN ('ADMINISTRADOR', 'VENDEDOR', 'BODEGUERO'))
 ) ENGINE=InnoDB$$
 
 CREATE TABLE IF NOT EXISTS producto (

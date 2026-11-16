@@ -177,7 +177,7 @@ public class Panel extends JFrame {
         }
         sidebarPanel.add(Box.createVerticalGlue());
         JLabel session = new JLabel(user == null ? "Sesión de demostración"
-                : "" + user.name() + " · " + user.role());
+                : user.name() + " · " + user.roleLabel());
         session.setForeground(new Color(211, 222, 231));
         session.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         session.setAlignmentX(LEFT_ALIGNMENT);
@@ -289,7 +289,8 @@ public class Panel extends JFrame {
                 {"1. Configurar sedes", "Crea las sucursales o bodegas donde guardarás productos."},
                 {"2. Organizar categorías", "Agrupa los artículos, por ejemplo: acero, herramientas o pinturas."},
                 {"3. Crear el catálogo", "Registra cada producto con su código, unidad y stock mínimo."},
-                {"4. Registrar movimientos", "Usa entradas y salidas para actualizar las existencias."}});
+                {"4. Agregar existencias", "Movimientos > Registrar movimiento > Entrada de mercancía suma stock a una sede."},
+                {"5. Registrar salidas", "Usa Salida de mercancía para descontar ventas o materiales entregados."}});
         } else if (seccion.equals("Productos")) {
             infoLabel.setText("Consulta códigos, unidades y existencias registradas por sede");
             cargarProductos();
@@ -311,9 +312,14 @@ public class Panel extends JFrame {
         btnNuevo.setText(seccion.equals("Movimientos") ? "Registrar movimiento"
                 : seccion.equals("Sedes") ? "Nueva sede"
                 : seccion.equals("Categorías") ? "Nueva categoría" : "Nuevo producto");
-        boolean canWrite = user == null || user.canWrite();
-        btnNuevo.setVisible(canWrite && List.of("Productos", "Movimientos", "Sedes", "Categorías").contains(seccion));
-        btnEditar.setVisible(canWrite && List.of("Productos", "Sedes", "Categorías").contains(seccion));
+        boolean canManageCatalog = user == null || user.canManageCatalog();
+        boolean canManageConfiguration = user == null || user.canManageConfiguration();
+        boolean canRegisterMovements = user == null || user.canWrite() || user.isSeller();
+        btnNuevo.setVisible((seccion.equals("Productos") && canManageCatalog)
+                || (seccion.equals("Movimientos") && canRegisterMovements)
+                || ((seccion.equals("Sedes") || seccion.equals("Categorías")) && canManageConfiguration));
+        btnEditar.setVisible((seccion.equals("Productos") && canManageCatalog)
+                || ((seccion.equals("Sedes") || seccion.equals("Categorías")) && canManageConfiguration));
         btnEditar.setText("Editar seleccionado");
         btnActualizar.setVisible(listado);
         btnActualizar.setText("Actualizar lista");
@@ -577,8 +583,10 @@ public class Panel extends JFrame {
                 return;
             }
             JComboBox<Inventario.Option> site = new JComboBox<>(sites.toArray(Inventario.Option[]::new));
-            JComboBox<String> type = new JComboBox<>(new String[]{
-                "Entrada de mercancía", "Salida de mercancía", "Ajuste de inventario"});
+            boolean seller = user != null && user.isSeller();
+            JComboBox<String> type = new JComboBox<>(seller
+                    ? new String[]{"Salida de mercancía"}
+                    : new String[]{"Entrada de mercancía", "Salida de mercancía", "Ajuste de inventario"});
             JComboBox<String> direction = new JComboBox<>(new String[]{
                 "Sumar al inventario", "Restar del inventario"});
             JComboBox<Inventario.Option> product = new JComboBox<>(products.toArray(Inventario.Option[]::new));
@@ -589,7 +597,7 @@ public class Panel extends JFrame {
             JPanel form = nuevoFormulario();
             agregarCampo(form, "Sede donde se mueve *", site);
             agregarCampo(form, "Tipo de movimiento *", type);
-            agregarCampo(form, "Para ajustes: dirección", direction);
+            if (!seller) agregarCampo(form, "Para ajustes: dirección", direction);
             agregarCampo(form, "Producto *", product);
             agregarCampo(form, "Cantidad *", quantity);
             agregarCampo(form, "Costo por unidad (opcional)", cost);
@@ -604,7 +612,7 @@ public class Panel extends JFrame {
 
             Inventario.Option selectedSite = (Inventario.Option) site.getSelectedItem();
             Inventario.Option selectedProduct = (Inventario.Option) product.getSelectedItem();
-            String movementType = switch (type.getSelectedIndex()) {
+            String movementType = seller ? "SALIDA" : switch (type.getSelectedIndex()) {
                 case 1 -> "SALIDA";
                 case 2 -> "AJUSTE";
                 default -> "ENTRADA";
