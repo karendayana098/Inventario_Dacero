@@ -5,6 +5,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.sql.SQLException;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -51,45 +54,75 @@ public final class Login extends JFrame {
     }
 
     private void buildUi() {
-        JPanel root = new JPanel(new BorderLayout(18, 18));
-        root.setBorder(BorderFactory.createEmptyBorder(28, 34, 30, 34));
-        root.setBackground(Color.WHITE);
+        Color canvas = new Color(242, 246, 249);
+        JPanel root = new JPanel(new GridBagLayout());
+        root.setBackground(canvas);
+        JPanel card = new JPanel(new BorderLayout(0, 24));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(225, 232, 238)),
+                BorderFactory.createEmptyBorder(34, 38, 34, 38)));
 
-        JLabel title = new JLabel("D-ACERO", SwingConstants.CENTER);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        JLabel title = new JLabel("D-ACERO");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 30));
         title.setForeground(navy);
-        JLabel subtitle = new JLabel("Inventario de materiales", SwingConstants.CENTER);
-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JLabel subtitle = new JLabel("Control de inventario de ferretería");
+        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         subtitle.setForeground(new Color(90, 103, 117));
-        JPanel heading = new JPanel(new GridLayout(2, 1, 0, 4));
+        JPanel heading = new JPanel(new GridLayout(2, 1, 0, 6));
         heading.setBackground(Color.WHITE);
         heading.add(title);
         heading.add(subtitle);
 
+        JLabel userLabel = new JLabel("Usuario");
+        JLabel passwordLabel = new JLabel("Contraseña");
+        userLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        passwordLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        userLabel.setForeground(navy);
+        passwordLabel.setForeground(navy);
         JPanel fields = new JPanel(new GridLayout(4, 1, 0, 8));
         fields.setBackground(Color.WHITE);
-        fields.add(new JLabel("Usuario"));
+        fields.add(userLabel);
         fields.add(userField);
-        fields.add(new JLabel("Contraseña"));
+        fields.add(passwordLabel);
         fields.add(passwordField);
 
         JButton loginButton = new JButton("Ingresar");
         loginButton.setBackground(teal);
         loginButton.setForeground(Color.WHITE);
         loginButton.setFocusPainted(false);
+        loginButton.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        loginButton.setPreferredSize(new Dimension(0, 46));
+        loginButton.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        loginButton.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
         loginButton.addActionListener(e -> doLogin());
         getRootPane().setDefaultButton(loginButton);
 
-        root.add(heading, BorderLayout.NORTH);
-        root.add(fields, BorderLayout.CENTER);
-        root.add(loginButton, BorderLayout.SOUTH);
+        JPanel form = new JPanel(new BorderLayout(0, 18));
+        form.setBackground(Color.WHITE);
+        form.add(fields, BorderLayout.CENTER);
+        form.add(loginButton, BorderLayout.SOUTH);
+        card.add(heading, BorderLayout.NORTH);
+        card.add(form, BorderLayout.CENTER);
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.fill = GridBagConstraints.HORIZONTAL;
+        constraints.weightx = 1;
+        constraints.insets = new Insets(24, 24, 24, 24);
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        root.add(card, constraints);
         setContentPane(root);
         Font inputFont = new Font("Segoe UI", Font.PLAIN, 17);
         userField.setFont(inputFont);
         passwordField.setFont(inputFont);
-        userField.setPreferredSize(new Dimension(300, 42));
-        passwordField.setPreferredSize(new Dimension(300, 42));
-        setSize(new Dimension(460, 340));
+        userField.setPreferredSize(new Dimension(350, 44));
+        passwordField.setPreferredSize(new Dimension(350, 44));
+        for (JTextField field : new JTextField[]{userField, passwordField}) {
+            field.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(207, 217, 225)),
+                    BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        }
+        setSize(new Dimension(520, 430));
     }
 
     private boolean createFirstAdmin() {

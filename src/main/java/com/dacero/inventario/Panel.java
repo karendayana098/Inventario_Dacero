@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -16,18 +17,29 @@ import java.sql.SQLException;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 /** JFrame Form: abrir Panel.java y elegir Design para editar la interfaz. */
 public class Panel extends JFrame {
     private final Color navy = new Color(23, 48, 74);
     private final Color teal = new Color(0, 139, 139);
+    private final Color pageBackground = new Color(243, 246, 249);
+    private final Color mutedText = new Color(96, 112, 128);
     private final App user;
     private final JButton btnSedes = new JButton("Sedes");
     private final JButton btnCategorias = new JButton("Categorías");
     private final JButton btnUsuarios = new JButton("Usuarios");
     private final JButton btnSalir = new JButton("Salir");
     private JPanel statsCards;
+    private JPanel tableCard;
+    private JLabel tableHeading;
+    private JLabel rowCountLabel;
+    private final JTextField searchField = new JTextField(24);
+    private TableRowSorter<TableModel> tableSorter;
     private String seccionActual = "Inicio";
 
     public Panel() {
@@ -59,6 +71,11 @@ public class Panel extends JFrame {
         });
         btnActualizar.addActionListener(e -> refrescarSeccion());
         btnExportar.addActionListener(e -> exportarTablaCsv());
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { filtrarTabla(); }
+            @Override public void removeUpdate(DocumentEvent e) { filtrarTabla(); }
+            @Override public void changedUpdate(DocumentEvent e) { filtrarTabla(); }
+        });
         mostrarSeccion("Inicio");
     }
 
@@ -69,22 +86,54 @@ public class Panel extends JFrame {
         brandLabel.setFont(new Font("Segoe UI", Font.BOLD, 23));
         for (JButton b : new JButton[]{btnInicio, btnProductos, btnMovimientos, btnReportes,
                 btnSedes, btnCategorias, btnUsuarios, btnSalir}) estiloBotonLateral(b);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 30));
         titleLabel.setForeground(navy);
-        for (JPanel card : new JPanel[]{cardProductos, cardReposicion, cardMovimientos}) card.setBackground(new Color(244,248,251));
+        for (JPanel card : new JPanel[]{cardProductos, cardReposicion, cardMovimientos}) {
+            card.setBackground(Color.WHITE);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(224, 231, 237)),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        }
         for (JLabel value : new JLabel[]{lblProductos, lblReposicion, lblMovimientos}) {
             value.setFont(new Font("Segoe UI", Font.BOLD, 27)); value.setForeground(teal);
         }
         for (JLabel label : new JLabel[]{capProductos, capReposicion, capMovimientos}) label.setForeground(new Color(70,82,95));
-        infoLabel.setForeground(new Color(80,95,110));
-        dataTable.setRowHeight(30); dataTable.getTableHeader().setBackground(navy);
-        dataTable.getTableHeader().setForeground(Color.WHITE); dataTable.setFillsViewportHeight(true);
+        infoLabel.setForeground(mutedText);
+        infoLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        dataTable.setRowHeight(34);
+        dataTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        dataTable.setSelectionBackground(new Color(218, 240, 238));
+        dataTable.setSelectionForeground(navy);
+        dataTable.setShowGrid(false);
+        dataTable.setIntercellSpacing(new Dimension(0, 1));
+        dataTable.setFillsViewportHeight(true);
+        dataTable.setAutoCreateRowSorter(true);
+        dataTable.getTableHeader().setBackground(new Color(235, 241, 245));
+        dataTable.getTableHeader().setForeground(navy);
+        dataTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        dataTable.getTableHeader().setPreferredSize(new Dimension(0, 38));
+        dataTable.getTableHeader().setReorderingAllowed(false);
+        DefaultTableCellRenderer bodyRenderer = new DefaultTableCellRenderer() {
+            @Override public java.awt.Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean selected, boolean focused, int row, int column) {
+                java.awt.Component component = super.getTableCellRendererComponent(
+                        table, value, selected, focused, row, column);
+                if (!selected) component.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
+                setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                return component;
+            }
+        };
+        dataTable.setDefaultRenderer(Object.class, bodyRenderer);
+        dataTable.setDefaultRenderer(Number.class, bodyRenderer);
         for (JButton b : new JButton[]{btnNuevo, btnEditar, btnActualizar, btnExportar}) {
             b.setBackground(teal); b.setForeground(Color.WHITE); b.setFocusPainted(false);
+            b.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            b.setBorder(BorderFactory.createEmptyBorder(9, 15, 9, 15));
+            b.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
         }
         setTitle("D-ACERO | Gestión de inventario");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(1050, 680));
+        setMinimumSize(new Dimension(1000, 650));
         setSize(1280, 800);
         setLocationRelativeTo(null);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -96,8 +145,11 @@ public class Panel extends JFrame {
         button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setHorizontalAlignment(SwingConstants.LEFT);
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        button.setPreferredSize(new Dimension(200, 44));
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setMargin(new Insets(0, 14, 0, 8));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        button.setPreferredSize(new Dimension(210, 46));
+        button.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
     }
 
     private void construirInterfaz() {
@@ -106,27 +158,35 @@ public class Panel extends JFrame {
 
         sidebarPanel.removeAll();
         sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
-        sidebarPanel.setBorder(BorderFactory.createEmptyBorder(22, 16, 18, 16));
-        sidebarPanel.setPreferredSize(new Dimension(230, 0));
+        sidebarPanel.setBorder(BorderFactory.createEmptyBorder(24, 15, 18, 15));
+        sidebarPanel.setPreferredSize(new Dimension(246, 0));
         brandLabel.setAlignmentX(LEFT_ALIGNMENT);
+        brandLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         sidebarPanel.add(brandLabel);
+        JLabel subtitle = new JLabel("INVENTARIO DE FERRETERÍA");
+        subtitle.setForeground(new Color(174, 195, 211));
+        subtitle.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        subtitle.setAlignmentX(LEFT_ALIGNMENT);
+        sidebarPanel.add(Box.createVerticalStrut(3));
+        sidebarPanel.add(subtitle);
         sidebarPanel.add(Box.createVerticalStrut(28));
-        for (JButton button : new JButton[]{btnInicio, btnProductos, btnSedes,
-                btnCategorias, btnMovimientos}) {
-            button.setAlignmentX(LEFT_ALIGNMENT);
-            sidebarPanel.add(button);
-            sidebarPanel.add(Box.createVerticalStrut(7));
-        }
+        agregarGrupoNavegacion("GENERAL", btnInicio, btnProductos);
+        agregarGrupoNavegacion("OPERACIÓN", btnMovimientos, btnSedes, btnCategorias);
         if (user != null && user.isAdmin()) {
-            btnUsuarios.setAlignmentX(LEFT_ALIGNMENT);
-            sidebarPanel.add(btnUsuarios);
-            sidebarPanel.add(Box.createVerticalStrut(7));
+            agregarGrupoNavegacion("ADMINISTRACIÓN", btnUsuarios);
         }
         sidebarPanel.add(Box.createVerticalGlue());
+        JLabel session = new JLabel(user == null ? "Sesión de demostración"
+                : "" + user.name() + " · " + user.role());
+        session.setForeground(new Color(211, 222, 231));
+        session.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        session.setAlignmentX(LEFT_ALIGNMENT);
+        sidebarPanel.add(session);
+        sidebarPanel.add(Box.createVerticalStrut(8));
         btnSalir.setAlignmentX(LEFT_ALIGNMENT);
         sidebarPanel.add(btnSalir);
 
-        JPanel heading = new JPanel(new GridLayout(2, 1, 0, 4));
+        JPanel heading = new JPanel(new GridLayout(2, 1, 0, 7));
         heading.setOpaque(false);
         heading.add(titleLabel);
         heading.add(infoLabel);
@@ -136,12 +196,12 @@ public class Panel extends JFrame {
             card.setPreferredSize(new Dimension(260, 94));
             statsCards.add(card);
         }
-        JPanel header = new JPanel(new BorderLayout(0, 16));
+        JPanel header = new JPanel(new BorderLayout(0, 20));
         header.setOpaque(false);
         header.add(heading, BorderLayout.NORTH);
         header.add(statsCards, BorderLayout.CENTER);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 9, 12));
         actions.setOpaque(false);
         actions.add(btnNuevo);
         actions.add(btnEditar);
@@ -149,12 +209,41 @@ public class Panel extends JFrame {
         actions.add(btnExportar);
 
         mainPanel.removeAll();
-        mainPanel.setLayout(new BorderLayout(12, 16));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(24, 26, 18, 26));
-        mainPanel.setBackground(Color.WHITE);
+        mainPanel.setLayout(new BorderLayout(0, 20));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 34, 20, 34));
+        mainPanel.setBackground(pageBackground);
         mainPanel.add(header, BorderLayout.NORTH);
-        mainPanel.add(dataScroll, BorderLayout.CENTER);
-        mainPanel.add(actions, BorderLayout.SOUTH);
+        tableCard = new JPanel(new BorderLayout(0, 0));
+        tableCard.setBackground(Color.WHITE);
+        tableCard.setBorder(BorderFactory.createLineBorder(new Color(225, 232, 238)));
+        JPanel tableTop = new JPanel(new BorderLayout(16, 8));
+        tableTop.setBackground(Color.WHITE);
+        tableTop.setBorder(BorderFactory.createEmptyBorder(16, 18, 14, 18));
+        tableHeading = new JLabel("Registros");
+        tableHeading.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        tableHeading.setForeground(navy);
+        JPanel searchBox = new JPanel(new BorderLayout(8, 0));
+        searchBox.setOpaque(false);
+        JLabel searchLabel = new JLabel("Buscar:");
+        searchLabel.setForeground(mutedText);
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setToolTipText("Busca por cualquier dato visible en la tabla");
+        searchField.setPreferredSize(new Dimension(260, 36));
+        searchBox.add(searchLabel, BorderLayout.WEST);
+        searchBox.add(searchField, BorderLayout.CENTER);
+        rowCountLabel = new JLabel("0 registros");
+        rowCountLabel.setForeground(mutedText);
+        JPanel topRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        topRight.setOpaque(false);
+        topRight.add(rowCountLabel);
+        topRight.add(searchBox);
+        tableTop.add(tableHeading, BorderLayout.WEST);
+        tableTop.add(topRight, BorderLayout.EAST);
+        dataScroll.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, new Color(232, 237, 241)));
+        tableCard.add(tableTop, BorderLayout.NORTH);
+        tableCard.add(dataScroll, BorderLayout.CENTER);
+        tableCard.add(actions, BorderLayout.SOUTH);
+        mainPanel.add(tableCard, BorderLayout.CENTER);
 
         root.add(sidebarPanel, BorderLayout.WEST);
         root.add(mainPanel, BorderLayout.CENTER);
@@ -162,31 +251,56 @@ public class Panel extends JFrame {
         revalidate();
     }
 
+    private void agregarGrupoNavegacion(String label, JButton... buttons) {
+        JLabel heading = new JLabel(label);
+        heading.setForeground(new Color(153, 176, 193));
+        heading.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        heading.setAlignmentX(LEFT_ALIGNMENT);
+        sidebarPanel.add(heading);
+        sidebarPanel.add(Box.createVerticalStrut(8));
+        for (JButton button : buttons) {
+            button.setAlignmentX(LEFT_ALIGNMENT);
+            sidebarPanel.add(button);
+            sidebarPanel.add(Box.createVerticalStrut(5));
+        }
+        sidebarPanel.add(Box.createVerticalStrut(14));
+    }
+
     private void mostrarSeccion(String seccion) {
         seccionActual = seccion;
+        searchField.setText("");
         titleLabel.setText(seccion.equals("Inicio") ? "Panel principal" : seccion);
+        tableHeading.setText(switch (seccion) {
+            case "Inicio" -> "Accesos rápidos";
+            case "Productos" -> "Catálogo de productos";
+            case "Movimientos" -> "Historial de movimientos";
+            case "Sedes" -> "Sedes registradas";
+            case "Categorías" -> "Categorías de productos";
+            default -> "Registros";
+        });
+        actualizarNavegacion(seccion);
         boolean inicio = seccion.equals("Inicio");
         cardProductos.setVisible(inicio); cardReposicion.setVisible(inicio); cardMovimientos.setVisible(inicio);
         statsCards.setVisible(inicio);
         if (inicio) {
-            infoLabel.setText("Inventario por sede · " + (user == null ? "D-ACERO" : "Sesión: " + user.name()));
+            infoLabel.setText("Resumen de la operación y accesos a las tareas de inventario");
             actualizarMetricas();
-            cargarTabla(new String[]{"Módulo", "Descripción", "Estado"}, new Object[][]{
-                {"Productos", "Catálogo e inventario por sede", "Disponible"},
-                {"Sedes", "Administración de sedes", "Disponible"},
-                {"Categorías", "Clasificación de productos", "Disponible"},
-                {"Movimientos", "Entradas, salidas y ajustes", "Disponible"}});
+            cargarTabla(new String[]{"Tarea", "Cómo usar el sistema"}, new Object[][]{
+                {"1. Configurar sedes", "Crea las sucursales o bodegas donde guardarás productos."},
+                {"2. Organizar categorías", "Agrupa los artículos, por ejemplo: acero, herramientas o pinturas."},
+                {"3. Crear el catálogo", "Registra cada producto con su código, unidad y stock mínimo."},
+                {"4. Registrar movimientos", "Usa entradas y salidas para actualizar las existencias."}});
         } else if (seccion.equals("Productos")) {
-            infoLabel.setText("Catálogo, categoría, stock mínimo y saldo por sede");
+            infoLabel.setText("Consulta códigos, unidades y existencias registradas por sede");
             cargarProductos();
         } else if (seccion.equals("Movimientos")) {
-            infoLabel.setText("Historial de entradas y salidas registrado en MySQL");
+            infoLabel.setText("Registra ingresos, salidas y ajustes para mantener actualizado el stock");
             cargarMovimientos();
         } else if (seccion.equals("Sedes")) {
-            infoLabel.setText("Administra las sedes y sus ubicaciones");
+            infoLabel.setText("Organiza los puntos de almacenamiento y venta de la ferretería");
             cargarSedes();
         } else if (seccion.equals("Categorías")) {
-            infoLabel.setText("Administra las categorías del catálogo");
+            infoLabel.setText("Agrupa los artículos por tipo de material o uso");
             cargarCategorias();
         } else {
             mostrarSeccion("Inicio");
@@ -194,16 +308,55 @@ public class Panel extends JFrame {
         }
         boolean listado = !inicio;
         dataScroll.setVisible(true);
-        btnNuevo.setText(seccion.equals("Movimientos") ? "Registrar mov."
+        btnNuevo.setText(seccion.equals("Movimientos") ? "Registrar movimiento"
                 : seccion.equals("Sedes") ? "Nueva sede"
                 : seccion.equals("Categorías") ? "Nueva categoría" : "Nuevo producto");
         boolean canWrite = user == null || user.canWrite();
         btnNuevo.setVisible(canWrite && List.of("Productos", "Movimientos", "Sedes", "Categorías").contains(seccion));
         btnEditar.setVisible(canWrite && List.of("Productos", "Sedes", "Categorías").contains(seccion));
+        btnEditar.setText("Editar seleccionado");
         btnActualizar.setVisible(listado);
-        btnExportar.setText("Exportar CSV");
+        btnActualizar.setText("Actualizar lista");
+        btnExportar.setText("Descargar CSV");
         btnExportar.setVisible(listado);
+        actualizarConteo();
         mainPanel.revalidate(); mainPanel.repaint();
+    }
+
+    private void actualizarNavegacion(String section) {
+        JButton selected = switch (section) {
+            case "Productos" -> btnProductos;
+            case "Movimientos" -> btnMovimientos;
+            case "Sedes" -> btnSedes;
+            case "Categorías" -> btnCategorias;
+            default -> btnInicio;
+        };
+        for (JButton button : new JButton[]{btnInicio, btnProductos, btnMovimientos,
+                btnSedes, btnCategorias}) {
+            boolean active = button == selected;
+            button.setBackground(active ? teal : navy);
+            button.setForeground(Color.WHITE);
+        }
+    }
+
+    private void filtrarTabla() {
+        if (tableSorter == null) return;
+        String query = searchField.getText().trim();
+        try {
+            tableSorter.setRowFilter(query.isEmpty() ? null
+                    : RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
+        } catch (java.util.regex.PatternSyntaxException ignored) {
+            tableSorter.setRowFilter(null);
+        }
+        actualizarConteo();
+    }
+
+    private void actualizarConteo() {
+        if (rowCountLabel == null) return;
+        int visible = dataTable.getRowCount();
+        int total = dataTable.getModel().getRowCount();
+        rowCountLabel.setText(visible == total ? total + (total == 1 ? " registro" : " registros")
+                : visible + " de " + total + " registros");
     }
 
     private void actualizarMetricas() {
@@ -219,9 +372,11 @@ public class Panel extends JFrame {
 
     private void cargarProductos() {
         try {
+            List<Object[]> rows = Inventario.products();
+            for (Object[] row : rows) row[6] = Boolean.TRUE.equals(row[6]) ? "Activo" : "Inactivo";
             cargarTabla(new String[]{"ID", "Código", "Producto", "Categoría", "Unidad",
                 "Stock mínimo", "Activo", "Sede", "Existencia"},
-                Inventario.products().toArray(Object[][]::new));
+                rows.toArray(Object[][]::new));
             ocultarId();
         } catch (SQLException ex) { mostrarError(ex); }
     }
@@ -231,6 +386,7 @@ public class Panel extends JFrame {
             cargarTabla(new String[]{"ID", "Fecha", "Tipo", "Sede", "Código", "Producto",
                 "Cantidad", "Usuario", "Referencia"},
                 Inventario.movements().toArray(Object[][]::new));
+            ocultarId();
         } catch (SQLException ex) { mostrarError(ex); }
     }
 
@@ -275,7 +431,8 @@ public class Panel extends JFrame {
             editarProducto(((Number) values[0]).longValue(), String.valueOf(values[1]),
                     String.valueOf(values[2]), String.valueOf(values[3]),
                     String.valueOf(values[4]), new BigDecimal(String.valueOf(values[5])),
-                    Boolean.parseBoolean(String.valueOf(values[6])));
+                    "Activo".equalsIgnoreCase(String.valueOf(values[6]))
+                            || Boolean.parseBoolean(String.valueOf(values[6])));
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "No se pudieron leer los datos del producto seleccionado.",
                     "Editar producto", JOptionPane.ERROR_MESSAGE);
@@ -284,33 +441,47 @@ public class Panel extends JFrame {
 
     private void editarProducto(Long id, String oldCode, String oldName, String oldCategory,
             String oldUnit, BigDecimal oldMinimum, boolean oldActive) {
-        JTextField code = new JTextField(oldCode, 20);
-        JTextField name = new JTextField(oldName, 20);
-        JTextField category = new JTextField("Sin categoría".equals(oldCategory) ? "" : oldCategory, 20);
-        JTextField unit = new JTextField(oldUnit, 20);
-        JTextField minimum = new JTextField(oldMinimum.toPlainString(), 20);
+        JTextField code = new JTextField(oldCode, 22);
+        JTextField name = new JTextField(oldName, 22);
+        JComboBox<String> category = new JComboBox<>();
+        category.setEditable(true);
+        category.addItem("");
+        try {
+            for (Inventario.Option option : Inventario.categories()) category.addItem(option.label());
+        } catch (SQLException ex) { mostrarError(ex); return; }
+        category.setSelectedItem("Sin categoría".equals(oldCategory) ? "" : oldCategory);
+        JComboBox<String> unit = new JComboBox<>(new String[]{"unidad", "kg", "metro", "litro", "bulto", "rollo", "lámina", "par"});
+        unit.setEditable(true);
+        unit.setSelectedItem(oldUnit.isBlank() ? "unidad" : oldUnit);
+        JTextField minimum = new JTextField(oldMinimum.toPlainString(), 22);
         JCheckBox active = new JCheckBox("Producto activo", oldActive);
-        JPanel form = new JPanel(new java.awt.GridLayout(0, 2, 8, 8));
-        form.add(new JLabel("Código:")); form.add(code);
-        form.add(new JLabel("Nombre:")); form.add(name);
-        form.add(new JLabel("Categoría:")); form.add(category);
-        form.add(new JLabel("Unidad de medida:")); form.add(unit);
-        form.add(new JLabel("Stock mínimo:")); form.add(minimum);
-        form.add(new JLabel("Estado:")); form.add(active);
+        JPanel form = nuevoFormulario();
+        agregarCampo(form, "Código del producto *", code);
+        agregarCampo(form, "Nombre del producto *", name);
+        agregarCampo(form, "Categoría", category);
+        agregarCampo(form, "Unidad de venta *", unit);
+        agregarCampo(form, "Avisar cuando el stock llegue a", minimum);
+        agregarCampo(form, "Estado", active);
+        JLabel note = new JLabel("Los campos con * son obligatorios. El stock actual se controla por sede.");
+        note.setForeground(mutedText);
+        form.add(note, BorderLayout.SOUTH);
         int answer = JOptionPane.showConfirmDialog(this, form,
-                id == null ? "Crear producto" : "Editar producto",
+                id == null ? "Agregar producto al catálogo" : "Editar producto del catálogo",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (answer != JOptionPane.OK_OPTION) return;
         try {
-            if (code.getText().isBlank() || name.getText().isBlank() || unit.getText().isBlank())
+            if (code.getText().isBlank() || name.getText().isBlank()
+                    || String.valueOf(unit.getEditor().getItem()).isBlank())
                 throw new IllegalArgumentException("Código, nombre y unidad son obligatorios.");
-            BigDecimal stock = new BigDecimal(minimum.getText().trim());
+            BigDecimal stock = decimal(minimum.getText(), "El stock mínimo");
             if (stock.signum() < 0) throw new IllegalArgumentException("El stock mínimo no puede ser negativo.");
             Inventario.saveProduct(id, code.getText(), name.getText(),
-                    category.getText(), unit.getText(), stock, active.isSelected());
+                    String.valueOf(category.getEditor().getItem()),
+                    String.valueOf(unit.getEditor().getItem()), stock, active.isSelected());
             cargarProductos();
-            JOptionPane.showMessageDialog(this, "Producto guardado correctamente.",
-                    "Productos", JOptionPane.INFORMATION_MESSAGE);
+            mostrarSeccion("Productos");
+            JOptionPane.showMessageDialog(this, "El producto quedó guardado en el catálogo.",
+                    "Producto guardado", JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException | IllegalArgumentException ex) {
             mostrarError(ex);
         }
@@ -327,9 +498,11 @@ public class Panel extends JFrame {
     private void editarSede(Long id, String name, String municipality, String address, boolean active) {
         JTextField nombre = new JTextField(name, 22), municipio = new JTextField(municipality, 22), direccion = new JTextField(address, 22);
         JCheckBox activa = new JCheckBox("Sede activa", active);
-        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
-        form.add(new JLabel("Nombre:")); form.add(nombre); form.add(new JLabel("Municipio:")); form.add(municipio);
-        form.add(new JLabel("Dirección:")); form.add(direccion); form.add(new JLabel("Estado:")); form.add(activa);
+        JPanel form = nuevoFormulario();
+        agregarCampo(form, "Nombre de la sede *", nombre);
+        agregarCampo(form, "Municipio *", municipio);
+        agregarCampo(form, "Dirección", direccion);
+        agregarCampo(form, "Estado", activa);
         if (JOptionPane.showConfirmDialog(this, form, id == null ? "Nueva sede" : "Editar sede",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
         try { Inventario.saveSite(id, nombre.getText(), municipio.getText(), direccion.getText(), activa.isSelected()); cargarSedes(); }
@@ -345,8 +518,9 @@ public class Panel extends JFrame {
 
     private void editarCategoria(Long id, String name, String description) {
         JTextField nombre = new JTextField(name, 22), descripcion = new JTextField(description, 22);
-        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
-        form.add(new JLabel("Nombre:")); form.add(nombre); form.add(new JLabel("Descripción:")); form.add(descripcion);
+        JPanel form = nuevoFormulario();
+        agregarCampo(form, "Nombre de la categoría *", nombre);
+        agregarCampo(form, "Descripción", descripcion);
         if (JOptionPane.showConfirmDialog(this, form, id == null ? "Nueva categoría" : "Editar categoría",
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
         try { Inventario.saveCategory(id, nombre.getText(), descripcion.getText()); cargarCategorias(); }
@@ -362,8 +536,34 @@ public class Panel extends JFrame {
     }
 
     private void sinSeleccion(String entity) {
-        JOptionPane.showMessageDialog(this, "Selecciona una " + entity + " de la tabla.",
+        JOptionPane.showMessageDialog(this, "Selecciona primero una " + entity + " de la lista.",
                 "Editar", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private JPanel nuevoFormulario() {
+        JPanel form = new JPanel(new BorderLayout(10, 14));
+        form.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        JPanel fields = new JPanel(new GridLayout(0, 2, 12, 12));
+        fields.setOpaque(false);
+        form.add(fields, BorderLayout.CENTER);
+        form.putClientProperty("fields", fields);
+        return form;
+    }
+
+    private void agregarCampo(JPanel form, String labelText, JComponent input) {
+        JPanel fields = (JPanel) form.getClientProperty("fields");
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        label.setForeground(navy);
+        fields.add(label);
+        fields.add(input);
+        input.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        input.setPreferredSize(new Dimension(250, 38));
+    }
+
+    private BigDecimal decimal(String value, String label) {
+        try { return new BigDecimal(value.trim().replace(',', '.')); }
+        catch (NumberFormatException ex) { throw new IllegalArgumentException(label + " debe ser un número válido."); }
     }
 
     private void registrarMovimiento() {
@@ -377,33 +577,42 @@ public class Panel extends JFrame {
                 return;
             }
             JComboBox<Inventario.Option> site = new JComboBox<>(sites.toArray(Inventario.Option[]::new));
-            JComboBox<String> type = new JComboBox<>(new String[]{"ENTRADA", "SALIDA", "AJUSTE"});
-            JComboBox<String> direction = new JComboBox<>(new String[]{"ENTRADA", "SALIDA"});
+            JComboBox<String> type = new JComboBox<>(new String[]{
+                "Entrada de mercancía", "Salida de mercancía", "Ajuste de inventario"});
+            JComboBox<String> direction = new JComboBox<>(new String[]{
+                "Sumar al inventario", "Restar del inventario"});
             JComboBox<Inventario.Option> product = new JComboBox<>(products.toArray(Inventario.Option[]::new));
             JTextField quantity = new JTextField("1", 12);
             JTextField cost = new JTextField("", 12);
             JTextField reference = new JTextField("", 18);
             JTextField note = new JTextField("", 18);
-            JPanel form = new JPanel(new java.awt.GridLayout(0, 2, 8, 8));
-            form.add(new JLabel("Sede:")); form.add(site);
-            form.add(new JLabel("Tipo:")); form.add(type);
-            form.add(new JLabel("Dirección del ajuste:")); form.add(direction);
-            form.add(new JLabel("Producto:")); form.add(product);
-            form.add(new JLabel("Cantidad:")); form.add(quantity);
-            form.add(new JLabel("Costo unitario (opcional):")); form.add(cost);
-            form.add(new JLabel("Referencia (opcional):")); form.add(reference);
-            form.add(new JLabel("Observación (opcional):")); form.add(note);
+            JPanel form = nuevoFormulario();
+            agregarCampo(form, "Sede donde se mueve *", site);
+            agregarCampo(form, "Tipo de movimiento *", type);
+            agregarCampo(form, "Para ajustes: dirección", direction);
+            agregarCampo(form, "Producto *", product);
+            agregarCampo(form, "Cantidad *", quantity);
+            agregarCampo(form, "Costo por unidad (opcional)", cost);
+            agregarCampo(form, "Factura o referencia (opcional)", reference);
+            agregarCampo(form, "Observación (opcional)", note);
+            JLabel noteHint = new JLabel("Las salidas reducen existencias; no se permiten cantidades negativas.");
+            noteHint.setForeground(mutedText);
+            form.add(noteHint, BorderLayout.SOUTH);
 
             if (JOptionPane.showConfirmDialog(this, form, "Registrar movimiento",
                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
 
             Inventario.Option selectedSite = (Inventario.Option) site.getSelectedItem();
             Inventario.Option selectedProduct = (Inventario.Option) product.getSelectedItem();
-            String movementType = String.valueOf(type.getSelectedItem());
+            String movementType = switch (type.getSelectedIndex()) {
+                case 1 -> "SALIDA";
+                case 2 -> "AJUSTE";
+                default -> "ENTRADA";
+            };
             String adjustment = "AJUSTE".equals(movementType)
-                    ? String.valueOf(direction.getSelectedItem()) : null;
-            BigDecimal qty = new BigDecimal(quantity.getText().trim());
-            BigDecimal unitCost = cost.getText().isBlank() ? null : new BigDecimal(cost.getText().trim());
+                    ? (direction.getSelectedIndex() == 0 ? "ENTRADA" : "SALIDA") : null;
+            BigDecimal qty = decimal(quantity.getText(), "La cantidad");
+            BigDecimal unitCost = cost.getText().isBlank() ? null : decimal(cost.getText(), "El costo unitario");
             if (qty.signum() <= 0 || (unitCost != null && unitCost.signum() < 0))
                 throw new IllegalArgumentException("Cantidad y costo deben ser valores válidos.");
             Inventario.registerMovement(selectedSite.id(), movementType, adjustment,
@@ -412,8 +621,8 @@ public class Panel extends JFrame {
             cargarMovimientos();
             actualizarMetricas();
             JOptionPane.showMessageDialog(this,
-                    "Movimiento registrado. El inventario se actualizó automáticamente.",
-                    "Movimiento", JOptionPane.INFORMATION_MESSAGE);
+                    "Movimiento guardado. Las existencias de la sede se actualizaron.",
+                    "Movimiento registrado", JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException | IllegalArgumentException ex) {
             mostrarError(ex);
         }
@@ -472,6 +681,9 @@ public class Panel extends JFrame {
         dataTable.setModel(new DefaultTableModel(filas, columnas) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         });
+        tableSorter = new TableRowSorter<>(dataTable.getModel());
+        dataTable.setRowSorter(tableSorter);
+        filtrarTabla();
     }
 
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents

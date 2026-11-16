@@ -3,6 +3,9 @@ package com.dacero.inventario;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,15 +28,34 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 final class UserManagementDialog extends JDialog {
+    private final Color navy = new Color(23, 48, 74);
+    private final Color teal = new Color(0, 139, 139);
     private final JTable table = new JTable();
     private List<Autenticacion.UserEntry> users = List.of();
 
     UserManagementDialog(Panel owner) {
         super(owner, "Gestión de usuarios", true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setLayout(new BorderLayout(10, 10));
-        table.setRowHeight(28);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        setLayout(new BorderLayout(0, 14));
+        getContentPane().setBackground(new Color(243, 246, 249));
+        getRootPane().setBorder(BorderFactory.createEmptyBorder(20, 22, 16, 22));
+        JLabel heading = new JLabel("Cuentas con acceso al sistema");
+        heading.setFont(new Font("Segoe UI", Font.BOLD, 21));
+        heading.setForeground(navy);
+        add(heading, BorderLayout.NORTH);
+        table.setRowHeight(34);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.setSelectionBackground(new Color(218, 240, 238));
+        table.setSelectionForeground(navy);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 1));
+        table.getTableHeader().setBackground(new Color(235, 241, 245));
+        table.getTableHeader().setForeground(navy);
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        table.getTableHeader().setPreferredSize(new Dimension(0, 36));
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setBorder(BorderFactory.createLineBorder(new Color(225, 232, 238)));
+        add(tableScroll, BorderLayout.CENTER);
 
         JButton add = new JButton("Nuevo usuario");
         JButton edit = new JButton("Editar / contraseña");
@@ -45,15 +67,24 @@ final class UserManagementDialog extends JDialog {
         refresh.addActionListener(e -> loadUsers());
         export.addActionListener(e -> exportUsers());
         close.addActionListener(e -> dispose());
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
         actions.add(add);
         actions.add(edit);
         actions.add(refresh);
         actions.add(export);
         actions.add(close);
         add(actions, BorderLayout.SOUTH);
+        for (JButton button : new JButton[]{add, edit, refresh, export, close}) {
+            button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            button.setFocusPainted(false);
+            button.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        }
+        add.setBackground(teal); add.setForeground(Color.WHITE);
+        edit.setBackground(navy); edit.setForeground(Color.WHITE);
+        refresh.setBackground(Color.WHITE); export.setBackground(Color.WHITE); close.setBackground(Color.WHITE);
 
-        setSize(800, 460);
+        setSize(900, 520);
         setLocationRelativeTo(owner);
         loadUsers();
     }

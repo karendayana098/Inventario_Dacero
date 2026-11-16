@@ -33,9 +33,12 @@ En el primer inicio, si la tabla `usuario_app` está vacía, la aplicación soli
 
 ## Funcionalidades
 
-- Panel con indicadores de productos activos, existencias bajo mínimo y movimientos del mes.
-- Gestión de productos, categorías, unidades, sedes y stock mínimo.
-- Registro de entradas, salidas y ajustes de inventario.
-- Consultas y exportación a PDF de existencias, stock bajo e historial de movimientos.
+- Panel principal con indicadores de productos activos, referencias por reponer y movimientos del mes.
+- Catálogo de productos con código, categoría, unidad de venta, estado y stock mínimo.
+- Gestión de sedes y categorías para organizar el inventario de la ferretería.
+- Registro de entradas, salidas y ajustes de existencias por sede, con referencia y costo opcionales.
+- Búsqueda en las listas y exportación de tablas a CSV, compatible con Excel.
+- Gestión de usuarios con roles de administrador, operador y consulta.
+- Interfaz de escritorio en español, con accesos agrupados por las tareas del negocio.
 
 Los movimientos históricos se conservan; los productos se pueden desactivar en lugar de eliminarlos.
