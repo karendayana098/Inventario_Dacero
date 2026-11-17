@@ -10,9 +10,6 @@ import java.awt.Insets;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
 import javax.swing.*;
@@ -70,7 +67,7 @@ public class Panel extends JFrame {
             else if ("Categorías".equals(seccionActual)) editarCategoriaSeleccionada();
         });
         btnActualizar.addActionListener(e -> refrescarSeccion());
-        btnExportar.addActionListener(e -> exportarTablaCsv());
+        btnExportar.addActionListener(e -> exportarTablaExcel());
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { filtrarTabla(); }
             @Override public void removeUpdate(DocumentEvent e) { filtrarTabla(); }
@@ -292,7 +289,7 @@ public class Panel extends JFrame {
                 {"4. Agregar existencias", "Movimientos > Registrar movimiento > Entrada de mercancía suma stock a una sede."},
                 {"5. Registrar salidas", "Usa Salida de mercancía para descontar ventas o materiales entregados."}});
         } else if (seccion.equals("Productos")) {
-            infoLabel.setText("Consulta códigos, unidades y existencias registradas por sede");
+            infoLabel.setText("Existencia en unidades por sede. Registra una entrada para cargar el stock inicial.");
             cargarProductos();
         } else if (seccion.equals("Movimientos")) {
             infoLabel.setText("Registra ingresos, salidas y ajustes para mantener actualizado el stock");
@@ -323,7 +320,7 @@ public class Panel extends JFrame {
         btnEditar.setText("Editar seleccionado");
         btnActualizar.setVisible(listado);
         btnActualizar.setText("Actualizar lista");
-        btnExportar.setText("Descargar CSV");
+        btnExportar.setText("Exportar a Excel");
         btnExportar.setVisible(listado);
         actualizarConteo();
         mainPanel.revalidate(); mainPanel.repaint();
@@ -381,7 +378,7 @@ public class Panel extends JFrame {
             List<Object[]> rows = Inventario.products();
             for (Object[] row : rows) row[6] = Boolean.TRUE.equals(row[6]) ? "Activo" : "Inactivo";
             cargarTabla(new String[]{"ID", "Código", "Producto", "Categoría", "Unidad",
-                "Stock mínimo", "Activo", "Sede", "Existencia"},
+                "Stock mínimo (alerta)", "Activo", "Sede", "Stock (unidades existentes)"},
                 rows.toArray(Object[][]::new));
             ocultarId();
         } catch (SQLException ex) { mostrarError(ex); }
@@ -636,36 +633,18 @@ public class Panel extends JFrame {
         }
     }
 
-    private void exportarTablaCsv() {
+    private void exportarTablaExcel() {
         TableModel model = dataTable.getModel();
         if (model.getColumnCount() == 0) return;
         JFileChooser chooser = new JFileChooser();
-        chooser.setSelectedFile(new File(seccionActual.toLowerCase().replace(' ', '_') + ".csv"));
+        chooser.setSelectedFile(new File(seccionActual.toLowerCase().replace(' ', '_') + ".xlsx"));
         if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
         File destination = chooser.getSelectedFile();
         try {
-            if (!destination.getName().toLowerCase().endsWith(".csv")) destination = new File(destination.getParentFile(), destination.getName() + ".csv");
-            StringBuilder csv = new StringBuilder("\uFEFF");
-            for (int c = 0; c < dataTable.getColumnCount(); c++) {
-                if (c > 0) csv.append(',');
-                csv.append(csvValue(dataTable.getColumnName(c)));
-            }
-            csv.append("\r\n");
-            for (int r = 0; r < dataTable.getRowCount(); r++) {
-                for (int c = 0; c < dataTable.getColumnCount(); c++) {
-                    if (c > 0) csv.append(',');
-                    csv.append(csvValue(dataTable.getValueAt(r, c)));
-                }
-                csv.append("\r\n");
-            }
-            Files.writeString(destination.toPath(), csv.toString(), StandardCharsets.UTF_8);
-            JOptionPane.showMessageDialog(this, "Tabla exportada en:\n" + destination.getAbsolutePath(), "Exportación", JOptionPane.INFORMATION_MESSAGE);
+            if (!destination.getName().toLowerCase().endsWith(".xlsx")) destination = new File(destination.getParentFile(), destination.getName() + ".xlsx");
+            ExcelTableExporter.export(dataTable, destination.toPath(), seccionActual);
+            JOptionPane.showMessageDialog(this, "Tabla de Excel guardada en:\n" + destination.getAbsolutePath(), "Exportación completada", JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException ex) { mostrarError(ex); }
-    }
-
-    private String csvValue(Object value) {
-        String text = value == null ? "" : value.toString();
-        return "\"" + text.replace("\"", "\"\"") + "\"";
     }
 
     private void salir() {

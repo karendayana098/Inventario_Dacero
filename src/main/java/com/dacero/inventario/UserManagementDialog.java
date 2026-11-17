@@ -8,8 +8,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -64,7 +62,7 @@ final class UserManagementDialog extends JDialog {
         JButton add = new JButton("Nuevo usuario");
         JButton edit = new JButton("Editar / contraseña");
         JButton refresh = new JButton("Actualizar");
-        JButton export = new JButton("Exportar CSV");
+        JButton export = new JButton("Exportar a Excel");
         JButton close = new JButton("Cerrar");
         add.addActionListener(e -> editUser(null));
         edit.addActionListener(e -> editSelected());
@@ -174,25 +172,17 @@ final class UserManagementDialog extends JDialog {
 
     private void exportUsers() {
         javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-        chooser.setSelectedFile(new File("usuarios.csv"));
+        chooser.setSelectedFile(new File("usuarios.xlsx"));
         if (chooser.showSaveDialog(this) != javax.swing.JFileChooser.APPROVE_OPTION) return;
         File file = chooser.getSelectedFile();
-        if (!file.getName().toLowerCase().endsWith(".csv")) file = new File(file.getParentFile(), file.getName() + ".csv");
-        StringBuilder csv = new StringBuilder("\uFEFF\"Nombre\",\"Usuario\",\"Rol\",\"Estado\"\r\n");
-        for (Autenticacion.UserEntry user : users) {
-            csv.append(csv(user.name())).append(',').append(csv(user.username())).append(',')
-                    .append(csv(user.role())).append(',').append(csv(user.active() ? "Activo" : "Inactivo"))
-                    .append("\r\n");
-        }
+        if (!file.getName().toLowerCase().endsWith(".xlsx")) file = new File(file.getParentFile(), file.getName() + ".xlsx");
         try {
-            Files.writeString(file.toPath(), csv.toString(), StandardCharsets.UTF_8);
+            ExcelTableExporter.export(table, file.toPath(), "Usuarios");
+            JOptionPane.showMessageDialog(this, "Tabla de Excel guardada en:\n" + file.getAbsolutePath(),
+                    "Exportación completada", JOptionPane.INFORMATION_MESSAGE);
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "No se pudo exportar", JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private String csv(String value) {
-        return "\"" + (value == null ? "" : value.replace("\"", "\"\"")) + "\"";
     }
 
     private RoleChoice roleChoice(String role) {

@@ -42,11 +42,11 @@ public final class InventoryRepository {
     public static List<Object[]> products() throws SQLException {
         String sql = "SELECT p.producto_id, p.codigo, p.nombre, "
                 + "COALESCE(c.nombre, 'Sin categoría'), p.unidad_medida, "
-                + "p.stock_minimo, p.activo, COALESCE(s.nombre, 'Sin inventario'), "
+                + "p.stock_minimo, p.activo, COALESCE(s.nombre, 'Sin sede activa'), "
                 + "COALESCE(i.existencia, 0) "
                 + "FROM producto p LEFT JOIN categoria c ON c.categoria_id=p.categoria_id "
-                + "LEFT JOIN inventario i ON i.producto_id=p.producto_id "
-                + "LEFT JOIN sede s ON s.sede_id=i.sede_id "
+                + "LEFT JOIN sede s ON s.activa=TRUE "
+                + "LEFT JOIN inventario i ON i.producto_id=p.producto_id AND i.sede_id=s.sede_id "
                 + "ORDER BY p.nombre, s.nombre";
         return rows(sql);
     }

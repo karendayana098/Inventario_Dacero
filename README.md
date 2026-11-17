@@ -39,7 +39,7 @@ En el primer inicio, si la tabla `usuario_app` está vacía, la aplicación soli
 - Catálogo de productos con código, categoría, unidad de venta, estado y stock mínimo.
 - Gestión de sedes y categorías para organizar el inventario de la ferretería.
 - Registro de entradas, salidas y ajustes de existencias por sede, con referencia y costo opcionales. Para agregar stock, abre **Movimientos > Registrar movimiento > Entrada de mercancía**, selecciona la sede y el producto, e indica la cantidad. La entrada actualiza la existencia automáticamente.
-- Búsqueda en las listas y exportación de tablas a CSV, compatible con Excel.
+- Búsqueda en las listas y exportación de libros `.xlsx` con tablas de Excel, filtros y encabezados formateados.
 - Gestión de usuarios con roles de Administrador, Vendedor y Bodeguero. Administrador tiene acceso completo; Vendedor registra salidas; Bodeguero administra productos y registra entradas, salidas y ajustes. La configuración de sedes, categorías y usuarios queda a cargo del Administrador.
 - Interfaz de escritorio en español, con accesos agrupados por las tareas del negocio.
 
